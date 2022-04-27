@@ -33,4 +33,7 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
 
     void getRatingByChatId(long chatId);
 
+    @Query(value = "SELECT * from rating", nativeQuery = true)
+    List<Rating> getListForSpam();
+
 }

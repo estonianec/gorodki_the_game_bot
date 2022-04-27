@@ -44,4 +44,9 @@ public class RatingServiceImpl implements RatingService {
     public Rating getUserRating(long chatId) {
         return ratingRepository.getByChatId(chatId);
     }
+
+    @Override
+    public List<Rating> getListForSpam() {
+        return ratingRepository.getListForSpam();
+    }
 }
