@@ -10,7 +10,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import pro.sky.telegrambot.model.Cities;
+import pro.sky.telegrambot.model.Rating;
 import pro.sky.telegrambot.service.impl.CityServiceImpl;
+import pro.sky.telegrambot.service.impl.RatingServiceImpl;
 
 import javax.annotation.PostConstruct;
 import java.util.*;
@@ -21,6 +23,7 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
 
     private final Logger logger = LoggerFactory.getLogger(TelegramBotUpdatesListener.class);
     private final CityServiceImpl citiesService;
+    private final RatingServiceImpl ratingService;
     String lastChar;
     int easyCount = 100;
     int normalCount = 250;
@@ -34,8 +37,9 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
     @Autowired
     private TelegramBot telegramBot;
 
-    public TelegramBotUpdatesListener(CityServiceImpl citiesService) {
+    public TelegramBotUpdatesListener(CityServiceImpl citiesService, RatingServiceImpl ratingService) {
         this.citiesService = citiesService;
+        this.ratingService = ratingService;
     }
 
     @PostConstruct
@@ -51,18 +55,28 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
             if (update.message() != null && update.message().text() != null) {
                 String msg = update.message().text();
                 chatId = update.message().chat().id();
+                String name = update.message().from().firstName();
                 switch (msg) {
                     case "/newgame легко":
-                        startNewGame(chatId, easyCount);
+                        startNewGame(chatId, easyCount, name);
                         break;
                     case "/newgame средне":
-                        startNewGame(chatId, normalCount);
+                        startNewGame(chatId, normalCount, name);
                         break;
                     case "/newgame сложно":
-                        startNewGame(chatId, hardCount);
+                        startNewGame(chatId, hardCount, name);
                         break;
                     case "/newgame тест":
-                        startNewGame(chatId, testCount);
+                        startNewGame(chatId, testCount, name);
+                        break;
+                    case "/rating":
+                        List<Rating> rating = ratingService.getRating();
+                        Rating userRating = ratingService.getUserRating(chatId);
+                        sendMessage(chatId, "Ты набрал " + userRating.getPoints() + " очков в " + userRating.getGames() + " игре.\n\n" +
+                                "Топ игроков:\n" +
+                                "\uD83E\uDD47 - " + rating.get(0).getName() + " - " + rating.get(0).getPoints() + " очков и " + rating.get(0).getGames() + " игр\n" +
+                                "\uD83E\uDD48 - " + rating.get(1).getName() + " - " + rating.get(1).getPoints() + " очков и " + rating.get(1).getGames() + " игр\n" +
+                                "\uD83E\uDD49 - " + rating.get(2).getName() + " - " + rating.get(2).getPoints() + " очков и " + rating.get(2).getGames() + " игр\n");
                         break;
                     case "/start":
                         logger.info("start");
@@ -82,7 +96,6 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                                     "/newgame легко");
                         } else if (!citiesService.checkIsCityExistInDB(msg)) {
                             sendMessage(chatId, "Такого города не существует.");
-//                        } else if (!currentSession.getLastCity().equals("") && currentSession.getLastCity().charAt(currentSession.getLastCity().length() - 1) != Character.toLowerCase(msg.charAt(0))) {
                         } else if (!currentSession.getLastCity().equals("") && !lastChar(currentSession.getLastCity()).equals(String.valueOf(Character.toLowerCase(msg.charAt(0))))) {
                             lastChar = lastChar(currentSession.getLastCity());
                             sendMessage(chatId, "Нужно начинать с последней буквы предыдущего города. В нашем случае, это " + lastChar);
@@ -113,6 +126,7 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                                 telegramBot.execute(sendSticker);
                                 logger.info(String.valueOf(currentSession));
                                 currentSession.getListOfCities().clear();
+                                ratingService.increasePoints(chatId, currentSession.getListOfUsedCities().size());
                                 currentSession.getListOfUsedCities().clear();
                                 currentSession.setLastCity("");
                                 sendMessage(chatId, "Победа за тобой! Мне не удалось вспомнить город на букву \"" + lastChar.toUpperCase() + "\"\n\n" +
@@ -130,9 +144,12 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
         telegramBot.execute(request);
     }
 
-    private void startNewGame(long chatId, int count) {
+    private void startNewGame(long chatId, int count, String name) {
         Cities listOfCities = citiesService.makeNewListOfCities(count, chatId);
         session.put(chatId, listOfCities);
+        if (ratingService.isUserExist(chatId)) {
+            ratingService.increaseGameCount(chatId);
+        } else ratingService.createNewUser(chatId, name);
         sendMessage(chatId, "Я создал игру и вспомнил лишь " + count + " городов. Начинай первый!");
         logger.info(String.valueOf(listOfCities));
     }
