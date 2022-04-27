@@ -21,11 +21,14 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
 
     private final Logger logger = LoggerFactory.getLogger(TelegramBotUpdatesListener.class);
     private final CityServiceImpl citiesService;
-    private Cities listOfCities;
     String lastChar;
     int easyCount = 100;
     int normalCount = 250;
     int hardCount = 500;
+    int testCount = 10;
+    long chatId;
+    HashMap<Long, Cities> session = new HashMap<>();
+    Cities currentSession;
 
 
     @Autowired
@@ -47,7 +50,7 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
             // Process your updates here
             if (update.message() != null && update.message().text() != null) {
                 String msg = update.message().text();
-                Long chatId = update.message().chat().id();
+                chatId = update.message().chat().id();
                 switch (msg) {
                     case "/newgame легко":
                         startNewGame(chatId, easyCount);
@@ -57,6 +60,9 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                         break;
                     case "/newgame сложно":
                         startNewGame(chatId, hardCount);
+                        break;
+                    case "/newgame тест":
+                        startNewGame(chatId, testCount);
                         break;
                     case "/start":
                         logger.info("start");
@@ -70,32 +76,34 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                         break;
                     default:
                         logger.info(msg);
-                        if (listOfCities == null) {
+                        currentSession = session.get(chatId);
+                        if (currentSession == null || currentSession.getListOfCities().isEmpty()) {
                             sendMessage(chatId, "Начни новую игру командой /newgame и выбранный уровень сложности, например\n" +
                                     "/newgame легко");
                         } else if (!citiesService.checkIsCityExistInDB(msg)) {
                             sendMessage(chatId, "Такого города не существует.");
-                        } else if (!listOfCities.getLastCity().equals("") && listOfCities.getLastCity().charAt(listOfCities.getLastCity().length() - 1) != Character.toLowerCase(msg.charAt(0))) {
-                            char lastChar = listOfCities.getLastCity().charAt(listOfCities.getLastCity().length() -  1);
+//                        } else if (!currentSession.getLastCity().equals("") && currentSession.getLastCity().charAt(currentSession.getLastCity().length() - 1) != Character.toLowerCase(msg.charAt(0))) {
+                        } else if (!currentSession.getLastCity().equals("") && !lastChar(currentSession.getLastCity()).equals(String.valueOf(Character.toLowerCase(msg.charAt(0))))) {
+                            lastChar = lastChar(currentSession.getLastCity());
                             sendMessage(chatId, "Нужно начинать с последней буквы предыдущего города. В нашем случае, это " + lastChar);
-                        } else if (listOfCities.getListOfUsedCities().contains(msg)) {
+                        } else if (currentSession.getListOfUsedCities().contains(msg)) {
                             sendMessage(chatId, "Такой город уже был использован.");
                         } else {
                             //Город есть в игровом списке?
-                            listOfCities.getListOfCities().remove(msg);
-                            listOfCities.addNewCityToUsedList(msg); //Добавляем город в список использованных.
+                            currentSession.getListOfCities().remove(msg);
+                            currentSession.addNewCityToUsedList(msg); //Добавляем город в список использованных.
                             lastChar = lastChar(msg);
-                            List<String> newCityList = listOfCities.getListOfCities().stream()
+                            List<String> newCityList = currentSession.getListOfCities().stream()
                                     .filter(e -> e.startsWith(lastChar))
                                     .limit(1)
                                     .collect(Collectors.toList());
                             if (!newCityList.isEmpty()) { //Нашли город?
                                 String newCity = newCityList.get(0);
-                                listOfCities.getListOfCities().remove(newCity); //Удаляем новый город из игрового списка.
+                                currentSession.getListOfCities().remove(newCity); //Удаляем новый город из игрового списка.
                                 logger.info("Удаляем новый город " + newCity + " из игрового списка.");
-                                listOfCities.getListOfUsedCities().add(newCity); //Добавляем новый город в список использованных.
+                                currentSession.getListOfUsedCities().add(newCity); //Добавляем новый город в список использованных.
                                 logger.info("Добавляем новый город " + newCity + " в список использованных.");
-                                listOfCities.setLastCity(newCity); //Добавляем новый город, как последний.
+                                currentSession.setLastCity(newCity); //Добавляем новый город, как последний.
                                 logger.info("Добавляем новый город " + newCity + ", как последний.");
                                 lastChar = lastChar(newCity);
                                 sendMessage(chatId, newCity + ", тебе на \"" + lastChar.toUpperCase() + "\"");
@@ -103,10 +111,10 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                                 String imageFile = "https://c.tenor.com/j_ijiBkU2a8AAAAM/title-victory.gif";
                                 SendSticker sendSticker = new SendSticker(chatId, imageFile);
                                 telegramBot.execute(sendSticker);
-                                logger.info(String.valueOf(listOfCities));
-                                listOfCities.getListOfCities().clear();
-                                listOfCities.getListOfUsedCities().clear();
-                                listOfCities.setLastCity("");
+                                logger.info(String.valueOf(currentSession));
+                                currentSession.getListOfCities().clear();
+                                currentSession.getListOfUsedCities().clear();
+                                currentSession.setLastCity("");
                                 sendMessage(chatId, "Победа за тобой! Мне не удалось вспомнить город на букву \"" + lastChar.toUpperCase() + "\"\n\n" +
                                         "Для новой игры введи команду /newgame и выбранный уровень сложности, например\n" +
                                         "/newgame легко");}
@@ -123,7 +131,8 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
     }
 
     private void startNewGame(long chatId, int count) {
-        listOfCities = citiesService.makeNewListOfCities(count, chatId);
+        Cities listOfCities = citiesService.makeNewListOfCities(count, chatId);
+        session.put(chatId, listOfCities);
         sendMessage(chatId, "Я создал игру и вспомнил лишь " + count + " городов. Начинай первый!");
         logger.info(String.valueOf(listOfCities));
     }
@@ -132,5 +141,6 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
         if ((msg.charAt(msg.length() - 1) != 'ь') && (msg.charAt(msg.length() - 1) != 'ы')) {
             return String.valueOf(msg.charAt(msg.length() - 1));
         } else return String.valueOf(msg.charAt(msg.length() - 2));
+
     }
 }
