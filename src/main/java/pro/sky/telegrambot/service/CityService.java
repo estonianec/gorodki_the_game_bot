@@ -12,4 +12,7 @@ public interface CityService {
 
     int getCountOfCitiesInDB();
 
+    String getRegionName(Long regionId);
+
+    String getCountryName(Long countryId);
 }

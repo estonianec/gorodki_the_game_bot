@@ -16,4 +16,6 @@ public interface RatingService {
     List<Rating> getRating();
 
     Rating getUserRating(long chatId);
+
+    List<Rating> getListForSpam();
 }

@@ -4,12 +4,12 @@ import java.util.Objects;
 import java.util.Set;
 
 public class Cities {
-    Set<String> listOfCities;
+    Set<City> listOfCities;
     Set<String> listOfUsedCities;
     Long chatId;
     String lastCity;
 
-    public Cities(Set<String> listOfCities, Set<String> listOfUsedCities, Long chatId, String lastCity) {
+    public Cities(Set<City> listOfCities, Set<String> listOfUsedCities, Long chatId, String lastCity) {
         this.listOfCities = listOfCities;
         this.listOfUsedCities = listOfUsedCities;
         this.chatId = chatId;
@@ -43,11 +43,11 @@ public class Cities {
         this.listOfUsedCities.add(newUsedCity);
     }
 
-    public Set<String> getListOfCities() {
+    public Set<City> getListOfCities() {
         return listOfCities;
     }
 
-    public void setListOfCities(Set<String> listOfCities) {
+    public void setListOfCities(Set<City> listOfCities) {
         this.listOfCities = listOfCities;
     }
 
