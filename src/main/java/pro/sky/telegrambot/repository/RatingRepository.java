@@ -28,7 +28,7 @@ public interface RatingRepository extends JpaRepository<Rating, Long> {
     @Query(value = "UPDATE rating SET points = points+?2 WHERE chat_id = ?1", nativeQuery = true)
     void increasePoints(long chatId, int points);
 
-    @Query(value = "SELECT * from rating order by points DESC, games LIMIT 3", nativeQuery = true)
+    @Query(value = "SELECT * from rating order by points DESC, games LIMIT 10", nativeQuery = true)
     List<Rating> getRating();
 
     void getRatingByChatId(long chatId);

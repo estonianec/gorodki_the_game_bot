@@ -96,11 +96,15 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                     case "/rating":
                         List<Rating> rating = ratingService.getRating();
                         Rating userRating = ratingService.getUserRating(chatId);
-                        sendMessage(chatId, "Ты набрал " + userRating.getPoints() + " очков в " + userRating.getGames() + " игре.\n\n" +
+                        StringBuilder msgToSend = new StringBuilder("Ты набрал " + userRating.getPoints() + " очков в " + userRating.getGames() + " игре.\n\n" +
                                 "Топ игроков:\n" +
                                 "\uD83E\uDD47 - " + rating.get(0).getName() + " - " + rating.get(0).getPoints() + " очков и " + rating.get(0).getGames() + " игр\n" +
                                 "\uD83E\uDD48 - " + rating.get(1).getName() + " - " + rating.get(1).getPoints() + " очков и " + rating.get(1).getGames() + " игр\n" +
                                 "\uD83E\uDD49 - " + rating.get(2).getName() + " - " + rating.get(2).getPoints() + " очков и " + rating.get(2).getGames() + " игр\n");
+                        for (int i = 4; i < rating.size(); i++) {
+                            msgToSend.append(i).append(" - ").append(rating.get(i).getName()).append(" - ").append(rating.get(i).getPoints()).append(" очков и ").append(rating.get(i).getGames()).append(" игр\n");
+                        }
+                        sendMessage(chatId, msgToSend.toString());
                         break;
                     case "/start":
                         logger.info("start");
