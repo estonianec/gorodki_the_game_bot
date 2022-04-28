@@ -8,6 +8,7 @@ import com.pengrad.telegrambot.request.SendSticker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import pro.sky.telegrambot.model.Cities;
 import pro.sky.telegrambot.model.City;
@@ -21,18 +22,6 @@ import java.util.stream.Collectors;
 
 @Service
 public class TelegramBotUpdatesListener implements UpdatesListener {
-
-//    Release:
-//    удалены города с окончанием в виде спецсимволов
-//    добавлена зависимость от регистра при проверке городов
-//    добавлены уровни сложности
-//    выводится название стран и регионов
-//    упрощена система начала новой игры и выбора сложности
-//    исправлены баги
-//    добавлена система спама подписчикам 😆
-//    To Do List:
-//    сделать приоритет на города той же страны
-
 
     private final Logger logger = LoggerFactory.getLogger(TelegramBotUpdatesListener.class);
     private final CityServiceImpl citiesService;
@@ -88,7 +77,7 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                         startNewGame(chatId, insaneCount, name);
                         break;
                     case "/start_spam":
-                        spamToUsers();
+//                        spamToUsers();
                         break;
                     case "/newgame тест":
                         startNewGame(chatId, testCount, name);
